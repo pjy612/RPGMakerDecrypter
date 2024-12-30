@@ -1,0 +1,46 @@
+name: .NET
+
+on:
+  push:
+    tags:
+      - v*
+
+jobs:
+  build_cli:
+  
+    env:
+      BUILD_CONFIG: 'Release'
+      CLI_PROJECT: 'RPGMakerDecrypter.Cli/RPGMakerDecrypter.Cli.csproj'
+
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Fetch tags
+      run: git fetch --all --tags
+      
+    - name: Setup NuGet
+      uses: NuGet/setup-nuget@v1.0.5
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 8.0.x
+        
+    - name: Restore dependencies
+      run: dotnet restore
+      
+    - name: Build
+      run: dotnet build --configuration $Env:BUILD_CONFIG --no-restore
+      
+    - name: Publish Linux CLI
+      run: dotnet publish $Env:CLI_PROJECT --configuration $Env:BUILD_CONFIG -r linux-x64 -p:PublishSingleFile=true --self-contained true --output $Env:GITHUB_WORKSPACE
+      
+    - name: Publish Windows CLI
+      run: dotnet publish $Env:CLI_PROJECT --configuration $Env:BUILD_CONFIG -r win-x64 -p:PublishSingleFile=true --self-contained true --output $Env:GITHUB_WORKSPACE
+          
+    - uses: ncipollo/release-action@v1.12.0
+      with:
+        bodyFile: CHANGELOG.MD
+        artifacts: "RPGMakerDecrypter-cli,RPGMakerDecrypter-cli.exe"
